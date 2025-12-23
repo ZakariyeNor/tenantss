@@ -25,33 +25,57 @@ SECRET_KEY = env('SECRET_KEY')
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
+# Hosts configuration
 ALLOWED_HOSTS = []
 
+# Tenant settings
+TENANT_MODEL = "tenants.Tenant"
+TENANT_DOMAIN_MODEL = "tenants.Domain"
 
-# Application definition
-
-INSTALLED_APPS = [
+# Shared apps (public schema)
+SHARED_APPS = [
+    # Tenant framework apps
+    'django_tenants',
+    
+    
+    # Local apps
+    'tenants',
+    'core',
+    
+    # Third-party apps
+    'corsheaders',
+    'whitenoise.runserver_nostatic',
+    
+    # Default django apps
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    
-    # Third-party apps
-    'corsheaders',
-    'rest_framework',
-    'rest_framework.authtoken',
-    'tenant_schemas',
-    'whitenoise.runserver_nostatic',
-    
-    # Local apps
-    'core',
-    'tenants',
 ]
 
+# Tenant-specific apps
+TENANT_APPS = [
+    # Default django apps
+    'django.contrib.contenttypes',
+    
+    # third-party apps
+    'rest_framework',
+    'rest_framework.authtoken',
+    
+    # Tenant local apps
+]
+
+# Application definition
+
+INSTALLED_APPS = list (SHARED_APPS) + [
+    app for app in TENANT_APPS if app not in SHARED_APPS
+]
+
+# Middleware configuration
 MIDDLEWARE = [
-    'tenant_schemas.middleware.TenantMiddleware',
+    'django_tenants.middleware.main.TenantMainMiddleware',
     
     'django.middleware.security.SecurityMiddleware',
     'whitenoise.middleware.WhiteNoiseMiddleware',
@@ -66,10 +90,11 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 
+# URL Configuration & Auth User Model
 ROOT_URLCONF = 'core_project.urls'
 AUTH_USER_MODEL = 'core.User'
 
-
+# Template settings
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
@@ -85,12 +110,13 @@ TEMPLATES = [
     },
 ]
 
+# WSGI application
 WSGI_APPLICATION = 'core_project.wsgi.application'
 
 # Database
 DATABASES = {
     'default': {
-        'ENGINE': "django.db.backends.postgresql",
+        'ENGINE': "django_tenants.postgresql_backend",
         'NAME': env('DB_NAME'),
         'USER': env('DB_USER'),
         'PASSWORD': env('DB_PASSWORD'),
@@ -99,6 +125,11 @@ DATABASES = {
     }
 }
 
+# Database routers
+DATABASE_ROUTERS = (
+    'django_tenants.routers.TenantSyncRouter',
+)
+# Caching configuration
 CACHES = {
     'default': {
         'BACKEND': 'django_redis.cache.RedisCache',
@@ -123,8 +154,6 @@ REST_FRAMEWORK = {
 
 
 # Password validation
-# https://docs.djangoproject.com/en/5.2/ref/settings/#auth-password-validators
-
 AUTH_PASSWORD_VALIDATORS = [
     {
         'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',
